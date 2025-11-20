@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>网页富文本编辑器</title>
+    <title>网页富文本编辑器 (HTML版)</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         :root {
@@ -26,6 +26,7 @@
             overflow: hidden;
         }
 
+        /* 主容器布局 */
         .editor-container {
             width: 1000px;
             max-width: 100%;
@@ -38,6 +39,7 @@
             position: relative;
         }
 
+        /* 工具栏 */
         .toolbar {
             padding: 8px 10px;
             background: #f8f9fa;
@@ -78,6 +80,7 @@
             border-color: #d0d0d0;
         }
 
+        /* 下拉菜单 */
         select.tool-select {
             padding: 4px;
             border: 1px solid transparent;
@@ -91,6 +94,7 @@
             background-color: var(--hover-color);
         }
 
+        /* 颜色选择器组合样式 */
         .color-group {
             display: flex;
             align-items: center;
@@ -128,44 +132,7 @@
             color: white;
         }
 
-        /* 导出下拉菜单样式 */
-        .dropdown {
-            position: relative;
-            display: inline-block;
-        }
-
-        .dropdown-content {
-            display: none;
-            position: absolute;
-            background-color: #f9f9f9;
-            min-width: 120px;
-            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
-            z-index: 1;
-            border-radius: 4px;
-            top: 100%; /* 位于按钮下方 */
-            left: 0;
-            margin-top: 5px; /* 与按钮间距 */
-        }
-
-        .dropdown-content a {
-            color: black;
-            padding: 8px 12px;
-            text-decoration: none;
-            display: block;
-            font-size: 14px;
-            transition: background-color 0.2s;
-        }
-
-        .dropdown-content a:hover {
-            background-color: var(--hover-color);
-            color: var(--primary-color);
-        }
-
-        .dropdown:hover .dropdown-content {
-            display: block;
-        }
-
-
+        /* 编辑区域 */
         .editor-content-wrapper {
             flex: 1;
             background-color: var(--bg-color);
@@ -186,7 +153,7 @@
             font-size: 16px;
             line-height: 1.6;
             color: #000;
-            margin-bottom: 30px; /* 给底部留点空间 */
+            margin-bottom: 30px;
         }
 
         #editor img {
@@ -198,6 +165,7 @@
             border: 1px dashed #2b579a;
         }
 
+        /* 底部状态栏 */
         .status-bar {
             background: #f8f9fa;
             border-top: 1px solid var(--border-color);
@@ -322,31 +290,21 @@
             <i class="fas fa-eraser"></i>
         </button>
         
-        <div class="dropdown">
-            <button class="tool-btn" title="导出文件">
-                <i class="fas fa-file-export"></i>
-                <i class="fas fa-caret-down" style="margin-left: 5px;"></i>
-            </button>
-            <div class="dropdown-content">
-                <a href="#" onclick="exportFile('doc')">Word (.doc)</a>
-                <a href="#" onclick="exportFile('html')">HTML (.html)</a>
-                <a href="#" onclick="exportFile('pdf')">PDF (.pdf)</a>
-            </div>
-        </div>
+        <button class="tool-btn" onclick="exportAsHTML()" title="保存为 HTML">
+            <i class="fas fa-download"></i>
+        </button>
     </div>
 
     <div class="editor-content-wrapper" onclick="focusEditor(event)">
         <div id="editor" contenteditable="true" spellcheck="false">
-            <h1>欢迎使用升级版编辑器</h1>
-            <p>您可以尝试以下新功能：</p>
+            <h1>欢迎使用网页版编辑器</h1>
+            <p>此版本已回退至稳定状态，并优化了导出功能。</p>
             <ul>
-                <li><b>两端对齐：</b>点击上方 <i class="fas fa-align-justify"></i> 按钮测试效果。</li>
-                <li><b>字数统计：</b>请查看窗口右下角，现在实时显示字数。</li>
-                <li><b>颜色确认：</b>选择颜色后，需要点击旁边的 <i class="fas fa-check"></i> 按钮才会生效，防止误操作。</li>
-                <li><b>导出选项：</b>点击 <i class="fas fa-file-export"></i> 按钮，现在可以选择导出为 Word、HTML 或 PDF 格式。</li>
+                <li><b>两端对齐：</b>点击上方 <i class="fas fa-align-justify"></i> 按钮可使文本左右对齐。</li>
+                <li><b>颜色确认：</b>选择颜色后，需点击旁边的 <i class="fas fa-check"></i> 确认生效。</li>
+                <li><b>导出 HTML：</b>点击工具栏最右侧的下载按钮，直接保存为 .html 文件。</li>
             </ul>
-            <p style="text-align: justify;">这是一段用于测试两端对齐的文本。当文本长度足够长，且自动换行时，两端对齐会让左右两侧的文字边缘整齐划一，排版看起来更加正式和美观。但是请注意，PDF 导出对于复杂的 HTML/CSS 还原可能不完全一致，这是客户端库的限制。</p>
-            <p><strong><span style="color: red;">红色</span></strong>的文字，和 <span style="background-color: rgb(255, 255, 0);">黄色高亮</span> 的文字。</p>
+            <p style="text-align: justify;">这里是一段演示两端对齐的长文本。当文本足够长并发生换行时，两侧的文字边缘将会保持平整。这个功能非常适合用于撰写正式文档。</p>
         </div>
     </div>
 
@@ -356,14 +314,11 @@
     </div>
 </div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
-
 <script>
     const editor = document.getElementById('editor');
-    let savedRange = null; // 用于保存文字选区
+    let savedRange = null; // 选区记忆
 
-    // 监听选区变化，保存当前选区
+    // 监听选区变化
     document.addEventListener('selectionchange', () => {
         const selection = window.getSelection();
         if (selection.rangeCount > 0) {
@@ -375,25 +330,24 @@
     });
 
     /**
-     * 核心格式化函数
+     * 核心格式化
      */
     function formatDoc(cmd, value = null) {
-        editor.focus(); // 确保编辑器获得焦点
+        editor.focus(); 
         document.execCommand(cmd, false, value);
-        updateStats(); // 操作后更新统计
+        updateStats(); 
     }
 
     /**
-     * 应用颜色 (带确认逻辑)
+     * 颜色应用（带确认逻辑）
      */
     function applyColor(type) {
-        // 恢复之前的选区
         if (savedRange) {
             const selection = window.getSelection();
             selection.removeAllRanges();
             selection.addRange(savedRange);
         } else {
-            editor.focus(); // 如果没有选区，聚焦编辑器
+            editor.focus();
         }
 
         let colorVal;
@@ -402,6 +356,7 @@
         } else if (type === 'hiliteColor') {
             colorVal = document.getElementById('hiliteColorPicker').value;
         }
+
         document.execCommand(type, false, colorVal);
         
         document.querySelector('.status-info').innerText = `已应用颜色: ${colorVal}`;
@@ -409,7 +364,7 @@
     }
 
     /**
-     * 字数统计功能
+     * 字数统计
      */
     function updateStats() {
         const text = editor.innerText || editor.textContent;
@@ -418,7 +373,7 @@
     }
 
     editor.addEventListener('input', updateStats);
-    updateStats(); // 初始化统计
+    updateStats();
 
     /**
      * 插入链接
@@ -456,156 +411,60 @@
     }
 
     /**
-     * 导出文件函数
-     * @param {string} format - 'doc', 'html', 'pdf'
+     * 导出为 HTML (修改版)
      */
-    async function exportFile(format) {
-        const editorContent = editor.innerHTML;
-        const filename = 'document.' + format;
+    function exportAsHTML() {
+        // 添加一些基础样式，确保导出的HTML在其他地方打开时也好看
+        const style = `
+            <style>
+                body { font-family: 'Segoe UI', sans-serif; padding: 40px; max-width: 800px; margin: 0 auto; line-height: 1.6; color: #333; }
+                img { max-width: 100%; height: auto; }
+                h1, h2, h3 { color: #2b579a; }
+            </style>`;
+            
+        const htmlContent = `
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>导出的文档</title>
+${style}
+</head>
+<body>
+${editor.innerHTML}
+</body>
+</html>`;
 
-        if (format === 'doc') {
-            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Document</title></head><body>";
-            const footer = "</body></html>";
-            const sourceHTML = header + editorContent + footer;
-            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
-            downloadFile(source, filename);
-        } else if (format === 'html') {
-            const sourceHTML = `<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>文档</title>\n</head>\n<body>\n${editorContent}\n</body>\n</html>`;
-            const source = 'data:text/html;charset=utf-8,' + encodeURIComponent(sourceHTML);
-            downloadFile(source, filename);
-        } else if (format === 'pdf') {
-            document.querySelector('.status-info').innerText = '正在生成 PDF...';
-            // 使用 html2canvas 将编辑器内容转换为 canvas 图像，然后用 jsPDF 写入
-            // 注意：jsPDF 和 html2canvas 对复杂 CSS 的支持有限
-            const doc = new window.jspdf.jsPDF({
-                orientation: 'portrait', // 或 'landscape'
-                unit: 'mm',
-                format: 'a4'
-            });
-
-            const contentWidth = editor.offsetWidth;
-            const contentHeight = editor.offsetHeight;
-
-            // 获取编辑器的原始样式，用于 html2canvas 渲染
-            const editorStyle = window.getComputedStyle(editor);
-            const originalPaddingTop = editorStyle.paddingTop;
-            const originalPaddingRight = editorStyle.paddingRight;
-            const originalPaddingBottom = editorStyle.paddingBottom;
-            const originalPaddingLeft = editorStyle.paddingLeft;
-            const originalBoxSizing = editorStyle.boxSizing;
-            const originalWidth = editor.style.width;
-            const originalMinHeight = editor.style.minHeight;
-            const originalBackgroundColor = editor.style.backgroundColor;
-
-            // 临时修改编辑器样式以适应 html2canvas 渲染，确保背景和内边距被捕获
-            editor.style.padding = '0'; // html2canvas 可能会处理内边距问题，这里暂时清零
-            editor.style.boxSizing = 'border-box';
-            editor.style.width = 'auto';
-            editor.style.minHeight = 'auto';
-            editor.style.backgroundColor = 'white'; // 确保背景色为白色，否则可能透明
-
-            // 考虑编辑器的实际渲染大小，而不是纯粹的 A4 尺寸
-            const scale = 2; // 提高分辨率
-
-            // 隐藏工具栏和状态栏，避免被截取到PDF中
-            document.getElementById('toolbar').style.display = 'none';
-            document.querySelector('.status-bar').style.display = 'none';
-
-            try {
-                const canvas = await html2canvas(editor, { 
-                    scale: scale,
-                    useCORS: true, // 如果有外部图片，可能需要
-                    logging: false, // 关闭日志
-                    windowWidth: editor.scrollWidth,
-                    windowHeight: editor.scrollHeight,
-                    x: editor.offsetLeft,
-                    y: editor.offsetTop,
-                    width: editor.scrollWidth,
-                    height: editor.scrollHeight,
-                });
-                const imgData = canvas.toDataURL('image/jpeg', 1.0); // 图像数据
-
-                const imgWidth = doc.internal.pageSize.getWidth();
-                const pageHeight = doc.internal.pageSize.getHeight();
-                const imgHeight = (canvas.height * imgWidth) / canvas.width;
-                let heightLeft = imgHeight;
-
-                let position = 0;
-
-                doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                heightLeft -= pageHeight;
-
-                while (heightLeft >= 0) {
-                    position = heightLeft - imgHeight;
-                    doc.addPage();
-                    doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
-                    heightLeft -= pageHeight;
-                }
-                doc.save(filename);
-            } catch (error) {
-                console.error("PDF 导出失败:", error);
-                alert("PDF 导出失败，请检查控制台了解详情。图片或复杂布局可能导致问题。");
-            } finally {
-                // 恢复编辑器样式
-                editor.style.paddingTop = originalPaddingTop;
-                editor.style.paddingRight = originalPaddingRight;
-                editor.style.paddingBottom = originalPaddingBottom;
-                editor.style.paddingLeft = originalPaddingLeft;
-                editor.style.boxSizing = originalBoxSizing;
-                editor.style.width = originalWidth;
-                editor.style.minHeight = originalMinHeight;
-                editor.style.backgroundColor = originalBackgroundColor;
-
-                // 显示工具栏和状态栏
-                document.getElementById('toolbar').style.display = 'flex';
-                document.querySelector('.status-bar').style.display = 'flex';
-                document.querySelector('.status-info').innerText = '准备就绪';
-            }
-        }
+        const blob = new Blob([htmlContent], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'document.html'; // 设置下载文件名为 .html
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
     }
 
-    /**
-     * 下载文件辅助函数
-     */
-    function downloadFile(source, filename) {
-        const fileDownload = document.createElement("a");
-        document.body.appendChild(fileDownload);
-        fileDownload.href = source;
-        fileDownload.download = filename;
-        fileDownload.click();
-        document.body.removeChild(fileDownload);
-    }
-
-    // 点击灰色区域聚焦到编辑器
+    // 点击空白处聚焦
     function focusEditor(event) {
         if (event.target.classList.contains('editor-content-wrapper')) {
             editor.focus();
             const range = document.createRange();
             range.selectNodeContents(editor);
-            range.collapse(false); // 将光标移到最后
+            range.collapse(false);
             const sel = window.getSelection();
             sel.removeAllRanges();
             sel.addRange(range);
         }
     }
     
-    // 防止Tab键切出
+    // Tab键处理
     editor.addEventListener('keydown', function(e) {
         if (e.key === 'Tab') {
             e.preventDefault();
             document.execCommand('insertText', false, '    ');
             updateStats();
-        }
-    });
-
-    // 监听dropdown外部点击，关闭dropdown
-    document.addEventListener('click', function(event) {
-        const dropdowns = document.getElementsByClassName('dropdown-content');
-        for (let i = 0; i < dropdowns.length; i++) {
-            const openDropdown = dropdowns[i];
-            if (openDropdown.style.display === 'block' && !event.target.closest('.dropdown')) {
-                openDropdown.style.display = 'none';
-            }
         }
     });
 </script>
