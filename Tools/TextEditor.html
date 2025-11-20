@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>网页富文本编辑器</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #2b579a;
+            --bg-color: #f3f2f1;
+            --border-color: #e1dfdd;
+            --hover-color: #edebe9;
+            --text-secondary: #605e5c;
+        }
+
+        body {
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+
+        .editor-container {
+            width: 1000px;
+            max-width: 100%;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            border-radius: 4px;
+            height: 95vh;
+            position: relative;
+        }
+
+        .toolbar {
+            padding: 8px 10px;
+            background: #f8f9fa;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            align-items: center;
+            user-select: none;
+            z-index: 10;
+        }
+
+        .divider {
+            width: 1px;
+            height: 20px;
+            background-color: #ccc;
+            margin: 0 6px;
+        }
+
+        .tool-btn {
+            background: transparent;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            cursor: pointer;
+            padding: 6px 8px;
+            font-size: 14px;
+            color: #333;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 32px;
+        }
+
+        .tool-btn:hover {
+            background-color: var(--hover-color);
+            color: var(--primary-color);
+            border-color: #d0d0d0;
+        }
+
+        select.tool-select {
+            padding: 4px;
+            border: 1px solid transparent;
+            border-radius: 3px;
+            background: transparent;
+            cursor: pointer;
+            font-size: 13px;
+            color: #333;
+        }
+        select.tool-select:hover {
+            background-color: var(--hover-color);
+        }
+
+        .color-group {
+            display: flex;
+            align-items: center;
+            background: #fff;
+            border: 1px solid var(--border-color);
+            border-radius: 3px;
+            padding: 2px;
+            gap: 2px;
+        }
+        
+        .color-label {
+            padding: 0 4px;
+            font-size: 14px;
+        }
+
+        input[type="color"] {
+            width: 24px;
+            height: 24px;
+            border: none;
+            padding: 0;
+            background: none;
+            cursor: pointer;
+        }
+
+        .confirm-btn {
+            background: #e1dfdd;
+            border: none;
+            cursor: pointer;
+            padding: 4px 8px;
+            font-size: 12px;
+            border-radius: 2px;
+        }
+        .confirm-btn:hover {
+            background: var(--primary-color);
+            color: white;
+        }
+
+        /* 导出下拉菜单样式 */
+        .dropdown {
+            position: relative;
+            display: inline-block;
+        }
+
+        .dropdown-content {
+            display: none;
+            position: absolute;
+            background-color: #f9f9f9;
+            min-width: 120px;
+            box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.2);
+            z-index: 1;
+            border-radius: 4px;
+            top: 100%; /* 位于按钮下方 */
+            left: 0;
+            margin-top: 5px; /* 与按钮间距 */
+        }
+
+        .dropdown-content a {
+            color: black;
+            padding: 8px 12px;
+            text-decoration: none;
+            display: block;
+            font-size: 14px;
+            transition: background-color 0.2s;
+        }
+
+        .dropdown-content a:hover {
+            background-color: var(--hover-color);
+            color: var(--primary-color);
+        }
+
+        .dropdown:hover .dropdown-content {
+            display: block;
+        }
+
+
+        .editor-content-wrapper {
+            flex: 1;
+            background-color: var(--bg-color);
+            overflow-y: auto;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            position: relative;
+        }
+
+        #editor {
+            width: 210mm;
+            min-height: 297mm; /* A4 */
+            background: white;
+            padding: 25mm 20mm;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+            outline: none;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #000;
+            margin-bottom: 30px; /* 给底部留点空间 */
+        }
+
+        #editor img {
+            max-width: 100%;
+            height: auto;
+            border: 1px solid transparent;
+        }
+        #editor img:hover {
+            border: 1px dashed #2b579a;
+        }
+
+        .status-bar {
+            background: #f8f9fa;
+            border-top: 1px solid var(--border-color);
+            padding: 5px 15px;
+            font-size: 12px;
+            color: var(--text-secondary);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            height: 30px;
+        }
+
+        .word-count span {
+            font-weight: bold;
+            color: #333;
+            margin-left: 5px;
+        }
+
+        ::-webkit-scrollbar { width: 10px; }
+        ::-webkit-scrollbar-thumb { background: #ccc; border-radius: 5px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+
+    </style>
+</head>
+<body>
+
+<div class="editor-container">
+    <div class="toolbar" id="toolbar">
+        <button class="tool-btn" onclick="formatDoc('undo')" title="撤销">
+            <i class="fas fa-undo"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('redo')" title="重做">
+            <i class="fas fa-redo"></i>
+        </button>
+        
+        <div class="divider"></div>
+
+        <select onchange="formatDoc('formatBlock', this.value); this.selectedIndex=0;" class="tool-select">
+            <option value="" selected hidden>段落</option>
+            <option value="p">正文</option>
+            <option value="h1">标题 1</option>
+            <option value="h2">标题 2</option>
+            <option value="h3">标题 3</option>
+        </select>
+        
+        <select onchange="formatDoc('fontSize', this.value); this.selectedIndex=0;" class="tool-select">
+            <option value="" selected hidden>字号</option>
+            <option value="1">小</option>
+            <option value="3">正常</option>
+            <option value="5">大</option>
+            <option value="7">特大</option>
+        </select>
+
+        <div class="divider"></div>
+
+        <button class="tool-btn" onclick="formatDoc('bold')" title="加粗">
+            <i class="fas fa-bold"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('italic')" title="斜体">
+            <i class="fas fa-italic"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('underline')" title="下划线">
+            <i class="fas fa-underline"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('strikeThrough')" title="删除线">
+            <i class="fas fa-strikethrough"></i>
+        </button>
+
+        <div class="divider"></div>
+
+        <div class="color-group" title="文字颜色">
+            <span class="color-label"><i class="fas fa-font" style="color: #d32f2f;"></i></span>
+            <input type="color" id="foreColorPicker" value="#000000">
+            <button class="confirm-btn" onclick="applyColor('foreColor')" title="确认应用颜色">
+                <i class="fas fa-check"></i>
+            </button>
+        </div>
+        
+        <div class="color-group" title="背景高亮">
+            <span class="color-label"><i class="fas fa-highlighter" style="color: #fbc02d;"></i></span>
+            <input type="color" id="hiliteColorPicker" value="#ffff00">
+            <button class="confirm-btn" onclick="applyColor('hiliteColor')" title="确认应用背景色">
+                <i class="fas fa-check"></i>
+            </button>
+        </div>
+
+        <div class="divider"></div>
+
+        <button class="tool-btn" onclick="formatDoc('justifyLeft')" title="左对齐">
+            <i class="fas fa-align-left"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('justifyCenter')" title="居中">
+            <i class="fas fa-align-center"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('justifyRight')" title="右对齐">
+            <i class="fas fa-align-right"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('justifyFull')" title="两端对齐">
+            <i class="fas fa-align-justify"></i>
+        </button>
+
+        <div class="divider"></div>
+
+        <button class="tool-btn" onclick="formatDoc('insertOrderedList')" title="有序列表">
+            <i class="fas fa-list-ol"></i>
+        </button>
+        <button class="tool-btn" onclick="formatDoc('insertUnorderedList')" title="无序列表">
+            <i class="fas fa-list-ul"></i>
+        </button>
+
+        <div class="divider"></div>
+
+        <button class="tool-btn" onclick="addLink()" title="插入链接">
+            <i class="fas fa-link"></i>
+        </button>
+        <button class="tool-btn" onclick="document.getElementById('imgUpload').click()" title="插入图片">
+            <i class="fas fa-image"></i>
+        </button>
+        <input type="file" id="imgUpload" style="display: none;" accept="image/*" onchange="insertImage(this)">
+
+        <button class="tool-btn" onclick="formatDoc('removeFormat')" title="清除格式">
+            <i class="fas fa-eraser"></i>
+        </button>
+        
+        <div class="dropdown">
+            <button class="tool-btn" title="导出文件">
+                <i class="fas fa-file-export"></i>
+                <i class="fas fa-caret-down" style="margin-left: 5px;"></i>
+            </button>
+            <div class="dropdown-content">
+                <a href="#" onclick="exportFile('doc')">Word (.doc)</a>
+                <a href="#" onclick="exportFile('html')">HTML (.html)</a>
+                <a href="#" onclick="exportFile('pdf')">PDF (.pdf)</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="editor-content-wrapper" onclick="focusEditor(event)">
+        <div id="editor" contenteditable="true" spellcheck="false">
+            <h1>欢迎使用升级版编辑器</h1>
+            <p>您可以尝试以下新功能：</p>
+            <ul>
+                <li><b>两端对齐：</b>点击上方 <i class="fas fa-align-justify"></i> 按钮测试效果。</li>
+                <li><b>字数统计：</b>请查看窗口右下角，现在实时显示字数。</li>
+                <li><b>颜色确认：</b>选择颜色后，需要点击旁边的 <i class="fas fa-check"></i> 按钮才会生效，防止误操作。</li>
+                <li><b>导出选项：</b>点击 <i class="fas fa-file-export"></i> 按钮，现在可以选择导出为 Word、HTML 或 PDF 格式。</li>
+            </ul>
+            <p style="text-align: justify;">这是一段用于测试两端对齐的文本。当文本长度足够长，且自动换行时，两端对齐会让左右两侧的文字边缘整齐划一，排版看起来更加正式和美观。但是请注意，PDF 导出对于复杂的 HTML/CSS 还原可能不完全一致，这是客户端库的限制。</p>
+            <p><strong><span style="color: red;">红色</span></strong>的文字，和 <span style="background-color: rgb(255, 255, 0);">黄色高亮</span> 的文字。</p>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <div class="status-info">准备就绪</div>
+        <div class="word-count">字符数: <span id="charCount">0</span></div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
+<script>
+    const editor = document.getElementById('editor');
+    let savedRange = null; // 用于保存文字选区
+
+    // 监听选区变化，保存当前选区
+    document.addEventListener('selectionchange', () => {
+        const selection = window.getSelection();
+        if (selection.rangeCount > 0) {
+            const range = selection.getRangeAt(0);
+            if (editor.contains(range.commonAncestorContainer)) {
+                savedRange = range.cloneRange();
+            }
+        }
+    });
+
+    /**
+     * 核心格式化函数
+     */
+    function formatDoc(cmd, value = null) {
+        editor.focus(); // 确保编辑器获得焦点
+        document.execCommand(cmd, false, value);
+        updateStats(); // 操作后更新统计
+    }
+
+    /**
+     * 应用颜色 (带确认逻辑)
+     */
+    function applyColor(type) {
+        // 恢复之前的选区
+        if (savedRange) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+        } else {
+            editor.focus(); // 如果没有选区，聚焦编辑器
+        }
+
+        let colorVal;
+        if (type === 'foreColor') {
+            colorVal = document.getElementById('foreColorPicker').value;
+        } else if (type === 'hiliteColor') {
+            colorVal = document.getElementById('hiliteColorPicker').value;
+        }
+        document.execCommand(type, false, colorVal);
+        
+        document.querySelector('.status-info').innerText = `已应用颜色: ${colorVal}`;
+        setTimeout(() => { document.querySelector('.status-info').innerText = '准备就绪'; }, 2000);
+    }
+
+    /**
+     * 字数统计功能
+     */
+    function updateStats() {
+        const text = editor.innerText || editor.textContent;
+        const charCount = text.replace(/\s/g, '').length; 
+        document.getElementById('charCount').innerText = charCount;
+    }
+
+    editor.addEventListener('input', updateStats);
+    updateStats(); // 初始化统计
+
+    /**
+     * 插入链接
+     */
+    function addLink() {
+        if (savedRange) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+        }
+        const url = prompt('请输入链接地址:', 'http://');
+        if (url) formatDoc('createLink', url);
+    }
+
+    /**
+     * 插入图片
+     */
+    function insertImage(input) {
+        if (savedRange) {
+            const selection = window.getSelection();
+            selection.removeAllRanges();
+            selection.addRange(savedRange);
+        }
+        const file = input.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const html = `<img src="${e.target.result}" style="max-width:100%; margin: 10px 0;">`;
+                document.execCommand('insertHTML', false, html);
+                updateStats();
+            };
+            reader.readAsDataURL(file);
+            input.value = '';
+        }
+    }
+
+    /**
+     * 导出文件函数
+     * @param {string} format - 'doc', 'html', 'pdf'
+     */
+    async function exportFile(format) {
+        const editorContent = editor.innerHTML;
+        const filename = 'document.' + format;
+
+        if (format === 'doc') {
+            const header = "<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word'><head><meta charset='utf-8'><title>Document</title></head><body>";
+            const footer = "</body></html>";
+            const sourceHTML = header + editorContent + footer;
+            const source = 'data:application/vnd.ms-word;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            downloadFile(source, filename);
+        } else if (format === 'html') {
+            const sourceHTML = `<!DOCTYPE html>\n<html lang="zh-CN">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width, initial-scale=1.0">\n<title>文档</title>\n</head>\n<body>\n${editorContent}\n</body>\n</html>`;
+            const source = 'data:text/html;charset=utf-8,' + encodeURIComponent(sourceHTML);
+            downloadFile(source, filename);
+        } else if (format === 'pdf') {
+            document.querySelector('.status-info').innerText = '正在生成 PDF...';
+            // 使用 html2canvas 将编辑器内容转换为 canvas 图像，然后用 jsPDF 写入
+            // 注意：jsPDF 和 html2canvas 对复杂 CSS 的支持有限
+            const doc = new window.jspdf.jsPDF({
+                orientation: 'portrait', // 或 'landscape'
+                unit: 'mm',
+                format: 'a4'
+            });
+
+            const contentWidth = editor.offsetWidth;
+            const contentHeight = editor.offsetHeight;
+
+            // 获取编辑器的原始样式，用于 html2canvas 渲染
+            const editorStyle = window.getComputedStyle(editor);
+            const originalPaddingTop = editorStyle.paddingTop;
+            const originalPaddingRight = editorStyle.paddingRight;
+            const originalPaddingBottom = editorStyle.paddingBottom;
+            const originalPaddingLeft = editorStyle.paddingLeft;
+            const originalBoxSizing = editorStyle.boxSizing;
+            const originalWidth = editor.style.width;
+            const originalMinHeight = editor.style.minHeight;
+            const originalBackgroundColor = editor.style.backgroundColor;
+
+            // 临时修改编辑器样式以适应 html2canvas 渲染，确保背景和内边距被捕获
+            editor.style.padding = '0'; // html2canvas 可能会处理内边距问题，这里暂时清零
+            editor.style.boxSizing = 'border-box';
+            editor.style.width = 'auto';
+            editor.style.minHeight = 'auto';
+            editor.style.backgroundColor = 'white'; // 确保背景色为白色，否则可能透明
+
+            // 考虑编辑器的实际渲染大小，而不是纯粹的 A4 尺寸
+            const scale = 2; // 提高分辨率
+
+            // 隐藏工具栏和状态栏，避免被截取到PDF中
+            document.getElementById('toolbar').style.display = 'none';
+            document.querySelector('.status-bar').style.display = 'none';
+
+            try {
+                const canvas = await html2canvas(editor, { 
+                    scale: scale,
+                    useCORS: true, // 如果有外部图片，可能需要
+                    logging: false, // 关闭日志
+                    windowWidth: editor.scrollWidth,
+                    windowHeight: editor.scrollHeight,
+                    x: editor.offsetLeft,
+                    y: editor.offsetTop,
+                    width: editor.scrollWidth,
+                    height: editor.scrollHeight,
+                });
+                const imgData = canvas.toDataURL('image/jpeg', 1.0); // 图像数据
+
+                const imgWidth = doc.internal.pageSize.getWidth();
+                const pageHeight = doc.internal.pageSize.getHeight();
+                const imgHeight = (canvas.height * imgWidth) / canvas.width;
+                let heightLeft = imgHeight;
+
+                let position = 0;
+
+                doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                heightLeft -= pageHeight;
+
+                while (heightLeft >= 0) {
+                    position = heightLeft - imgHeight;
+                    doc.addPage();
+                    doc.addImage(imgData, 'JPEG', 0, position, imgWidth, imgHeight);
+                    heightLeft -= pageHeight;
+                }
+                doc.save(filename);
+            } catch (error) {
+                console.error("PDF 导出失败:", error);
+                alert("PDF 导出失败，请检查控制台了解详情。图片或复杂布局可能导致问题。");
+            } finally {
+                // 恢复编辑器样式
+                editor.style.paddingTop = originalPaddingTop;
+                editor.style.paddingRight = originalPaddingRight;
+                editor.style.paddingBottom = originalPaddingBottom;
+                editor.style.paddingLeft = originalPaddingLeft;
+                editor.style.boxSizing = originalBoxSizing;
+                editor.style.width = originalWidth;
+                editor.style.minHeight = originalMinHeight;
+                editor.style.backgroundColor = originalBackgroundColor;
+
+                // 显示工具栏和状态栏
+                document.getElementById('toolbar').style.display = 'flex';
+                document.querySelector('.status-bar').style.display = 'flex';
+                document.querySelector('.status-info').innerText = '准备就绪';
+            }
+        }
+    }
+
+    /**
+     * 下载文件辅助函数
+     */
+    function downloadFile(source, filename) {
+        const fileDownload = document.createElement("a");
+        document.body.appendChild(fileDownload);
+        fileDownload.href = source;
+        fileDownload.download = filename;
+        fileDownload.click();
+        document.body.removeChild(fileDownload);
+    }
+
+    // 点击灰色区域聚焦到编辑器
+    function focusEditor(event) {
+        if (event.target.classList.contains('editor-content-wrapper')) {
+            editor.focus();
+            const range = document.createRange();
+            range.selectNodeContents(editor);
+            range.collapse(false); // 将光标移到最后
+            const sel = window.getSelection();
+            sel.removeAllRanges();
+            sel.addRange(range);
+        }
+    }
+    
+    // 防止Tab键切出
+    editor.addEventListener('keydown', function(e) {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            document.execCommand('insertText', false, '    ');
+            updateStats();
+        }
+    });
+
+    // 监听dropdown外部点击，关闭dropdown
+    document.addEventListener('click', function(event) {
+        const dropdowns = document.getElementsByClassName('dropdown-content');
+        for (let i = 0; i < dropdowns.length; i++) {
+            const openDropdown = dropdowns[i];
+            if (openDropdown.style.display === 'block' && !event.target.closest('.dropdown')) {
+                openDropdown.style.display = 'none';
+            }
+        }
+    });
+</script>
+
+</body>
+</html>
