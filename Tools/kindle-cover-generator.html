@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kindle Paperwhite 3 屏保生成器 (HQ 16-Level)</title>
+    <title>Kindle Paperwhite 3 屏保生成器 (完美模拟版)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <style>
         :root {
-            --kindle-black: #111;
+            --kindle-black: #181818;
             --kindle-bg: #f5f5f5;
             --accent: #0078d4;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: var(--kindle-bg);
-            color: var(--kindle-black);
+            color: #333;
             margin: 0;
             padding: 20px;
             display: flex;
@@ -26,42 +26,44 @@
             width: 100%;
             background: white;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
             box-sizing: border-box;
         }
-        h1 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .step { margin-bottom: 30px; border-bottom: 1px solid #f0f0f0; padding-bottom: 20px; }
+        h1 { margin-top: 0; border-bottom: 2px solid #f0f0f0; padding-bottom: 15px; color: #111; }
+        .step { margin-bottom: 30px; border-bottom: 1px solid #f0f0f0; padding-bottom: 25px; }
         .step:last-child { border-bottom: none; }
-        .step-title { font-weight: bold; font-size: 1.2em; margin-bottom: 15px; display: block; }
+        .step-title { font-weight: 700; font-size: 1.25em; margin-bottom: 20px; display: block; color: #111; }
         
         /* Upload */
         .file-upload {
-            border: 2px dashed #ccc;
-            padding: 40px;
+            border: 2px dashed #ddd;
+            padding: 50px 20px;
             text-align: center;
             cursor: pointer;
-            border-radius: 4px;
-            transition: 0.2s;
+            border-radius: 8px;
+            transition: all 0.3s ease;
+            background: #fafafa;
         }
-        .file-upload:hover { border-color: var(--accent); background: #f0f8ff; }
+        .file-upload:hover { border-color: var(--accent); background: #f0f7ff; box-shadow: 0 2px 8px rgba(0,120,212,0.1); }
         
         /* Editor Area */
         .editor-wrapper {
             display: flex;
-            gap: 20px;
+            gap: 30px;
             flex-wrap: wrap;
             align-items: flex-start;
         }
         
         .crop-container {
             flex: 2;
-            height: 500px;
-            background: #333;
-            min-width: 300px;
+            height: 520px;
+            background: #222;
+            min-width: 320px;
             overflow: hidden;
             position: relative;
-            border-radius: 4px;
+            border-radius: 8px;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
         }
         
         #image-to-crop { 
@@ -77,63 +79,94 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            min-width: 250px;
+            min-width: 280px;
         }
         
-        /* Simulating Kindle Screen */
-        .kindle-frame {
-            width: 240px; 
-            height: 322px; 
-            border: 10px solid #111;
-            border-radius: 10px;
-            background: #e8e8e8;
-            padding: 5px;
-            box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+        /* --- FIX: Improved Kindle Simulation Structure --- */
+        /* 1. The outer device bezel (rounded corners, thick black) */
+        .kindle-bezel {
+            background: var(--kindle-black);
+            /* Padding simulates the bezel thickness. Bottom is slightly thicker on real devices. */
+            padding: 15px 15px 25px 15px; 
+            border-radius: 20px; /* Device body corners */
+            box-shadow: 
+                0 10px 25px rgba(0,0,0,0.3), /* Drop shadow */
+                inset 0 2px 3px rgba(255,255,255,0.1); /* Subtle top edge highlight */
+            display: inline-block;
+            margin-bottom: 15px;
             position: relative;
-            margin-bottom: 10px;
         }
+        
+        /* Optional: Simulate the small power LED at the bottom */
+        .kindle-bezel::after {
+            content: ''; display: block; width: 4px; height: 4px; background: #333; border-radius: 50%;
+            position: absolute; bottom: 10px; left: 50%; transform: translateX(-50%);
+        }
+
+        /* 2. The inner screen container (sharp corners, exact aspect ratio) */
+        .kindle-screen {
+            width: 240px;
+            /* Exact aspect ratio: 240 * (1448 / 1072) ≈ 324.18 */
+            height: 324px; 
+            background: #e0e0e0; /* Screen off color */
+            /* A tiny border to define the screen edge against the bezel */
+            border: 1px solid #000; 
+            box-sizing: border-box;
+            /* Ensure screen corners are sharp, not rounded by the bezel */
+            overflow: hidden; 
+        }
+
         #preview-canvas {
             width: 100%;
             height: 100%;
             display: block;
-            /* Remove pixelated rendering to show smooth 16-level grayscale */
-            /* image-rendering: pixelated; */ 
+            /* Ensure the canvas fills the sharp screen rectangle precisely */
         }
-        .preview-label { font-size: 0.85em; color: #666; text-align: center; margin-bottom: 10px;}
+        /* --- FIX END --- */
+
+        .preview-label { font-size: 0.9em; color: #666; text-align: center; margin-bottom: 15px; font-weight: 500;}
 
         /* Controls */
         .controls { display: flex; gap: 10px; justify-content: center; width: 100%; }
         button {
-            padding: 8px 16px;
+            padding: 10px 18px;
             background: white;
-            border: 1px solid #ccc;
-            border-radius: 4px;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
             cursor: pointer;
-            font-weight: 500;
+            font-weight: 600;
+            font-size: 0.9em;
+            transition: all 0.2s;
+            color: #444;
         }
-        button:hover { background: #eee; }
-        button.primary { background: var(--accent); color: white; border: none; }
-        button.primary:hover { background: #005a9e; }
+        button:hover { background: #f5f5f5; border-color: #bbb; }
+        button:active { background: #eee; }
+        button.primary { background: var(--accent); color: white; border: none; box-shadow: 0 2px 6px rgba(0,120,212,0.2); }
+        button.primary:hover { background: #0064b1; box-shadow: 0 4px 12px rgba(0,120,212,0.3); }
 
         /* Meta Inputs */
         .meta-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 15px;
+            gap: 20px;
         }
-        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
+        .form-group label { display: block; margin-bottom: 8px; font-size: 0.95em; font-weight: 600; color: #555; }
         .form-group input { 
-            width: 100%; padding: 8px; box-sizing: border-box; 
-            border: 1px solid #ccc; border-radius: 4px;
+            width: 100%; padding: 12px; box-sizing: border-box; 
+            border: 1px solid #ddd; border-radius: 6px;
+            font-size: 1em; transition: border 0.2s;
         }
+        .form-group input:focus { border-color: var(--accent); outline: none; }
 
         .info-box {
-            background: #eef;
-            padding: 15px;
-            border-radius: 4px;
-            font-size: 0.9em;
-            margin-top: 20px;
-            border-left: 4px solid var(--accent);
+            background: #edf7ff;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 0.95em;
+            margin-top: 25px;
+            border-left: 5px solid var(--accent);
+            line-height: 1.6;
+            color: #335;
         }
     </style>
 </head>
@@ -141,27 +174,30 @@
 
 <div class="container">
     <h1>Kindle Paperwhite 3 屏保生成器</h1>
-    <p>将任意图片适配为 PPW3 屏保 (1448x1072)，并打包为电子书文件。</p>
+    <p style="color: #666; margin-bottom: 30px;">将任意图片适配为 PPW3 屏保 (1448x1072)，高质量 16 级灰度抖动处理。</p>
 
     <div class="step">
         <span class="step-title">1. 选择图片</span>
         <div class="file-upload" onclick="document.getElementById('fileInput').click()">
             <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
-            <p>点击上传或拖拽图片至此<br><span style="color:#888; font-size:0.8em">支持 JPG, PNG</span></p>
+            <p style="font-size: 1.1em; margin-bottom: 10px;">点击上传或拖拽图片至此</p>
+            <span style="color:#999; font-size:0.9em">支持高分辨率 JPG, PNG</span>
         </div>
     </div>
 
     <div class="step" id="editor-step" style="display:none;">
-        <span class="step-title">2. 调整与预览 (E-Ink 16级灰度模拟)</span>
+        <span class="step-title">2. 调整与预览 (所见即所得)</span>
         <div class="editor-wrapper">
             <div class="crop-container">
                 <img id="image-to-crop" src="">
             </div>
             <div class="preview-container">
-                <div class="kindle-frame">
-                    <canvas id="preview-canvas"></canvas>
+                <div class="kindle-bezel">
+                    <div class="kindle-screen">
+                        <canvas id="preview-canvas"></canvas>
+                    </div>
                 </div>
-                <div class="preview-label">Paperwhite 3 墨水屏模拟效果</div>
+                <div class="preview-label">Paperwhite 3 真机模拟效果 (16级灰度)</div>
                 <div class="controls">
                     <button onclick="updatePreview()">刷新预览</button>
                     <button onclick="cropper.rotate(90); updatePreview()">旋转 90°</button>
@@ -171,23 +207,25 @@
     </div>
 
     <div class="step" id="download-step" style="display:none;">
-        <span class="step-title">3. 书籍信息与导出</span>
+        <span class="step-title">3. 导出电子书</span>
         <div class="meta-grid">
             <div class="form-group">
-                <label>书籍标题 (显示在顶部)</label>
-                <input type="text" id="bookTitle" placeholder="Custom Wallpaper">
+                <label>书籍标题 (作为屏保时的名称)</label>
+                <input type="text" id="bookTitle" placeholder="My Wallpaper">
             </div>
             <div class="form-group">
-                <label>作者 (显示在列表)</label>
-                <input type="text" id="bookAuthor" placeholder="Saver">
+                <label>作者 (方便归类)</label>
+                <input type="text" id="bookAuthor" placeholder="Saver Tool">
             </div>
         </div>
         <div class="info-box">
-            <strong>提示：</strong> 生成的文件为 EPUB 格式。<br>
-            <b>效果说明：</b> 预览图已应用 Kindle 的 16 级灰度抖动算法，所见即所得。请使用 Calibre 转换为 AZW3 格式以获得最佳兼容性。
+            <strong>最佳实践指南：</strong><br>
+            1. 此工具生成标准的 <b>EPUB</b> 文件，已内嵌高质量处理后的封面。<br>
+            2. 为确保 Kindle 的“息屏显示封面”功能完美识别，强烈建议下载后使用 <b>Calibre</b> 将此 EPUB 转换为 <b>AZW3</b> 或 **KFX** 格式。<br>
+            3. 通过 USB 将转换后的文件放入 Kindle 的 `documents` 文件夹。
         </div>
-        <div style="margin-top: 20px; text-align: right;">
-            <button class="primary" onclick="generateBook()" style="padding: 12px 24px; font-size: 1.1em;">生成并下载电子书</button>
+        <div style="margin-top: 30px; text-align: right;">
+            <button class="primary" onclick="generateBook()" style="padding: 14px 30px; font-size: 1.1em; font-weight: 700;">生成并下载电子书</button>
         </div>
     </div>
 </div>
@@ -197,7 +235,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
 
 <script>
-    // Configuration for PPW3
+    // Configuration for PPW3 (1448x1072, 300 PPI)
     const KINDLE_WIDTH = 1072;
     const KINDLE_HEIGHT = 1448;
     
@@ -219,7 +257,8 @@
                 imageElement.src = e.target.result;
                 document.getElementById('editor-step').style.display = 'block';
                 document.getElementById('download-step').style.display = 'block';
-                setTimeout(initCropper, 50);
+                // Add a slight delay to allow UI to update before heavy JS kicks in
+                setTimeout(initCropper, 100);
             }
             reader.readAsDataURL(input.files[0]);
         }
@@ -231,27 +270,31 @@
         
         cropper = new Cropper(imageElement, {
             aspectRatio: KINDLE_WIDTH / KINDLE_HEIGHT,
-            viewMode: 1,
-            autoCropArea: 0.9,
-            background: false,
+            viewMode: 1, // Restrict crop box to not exceed canvas
+            autoCropArea: 0.95, // Start with a large crop box
+            dragMode: 'move',
+            background: false, // Cleaner look
+            toggleDragModeOnDblclick: false,
             ready() {
                 imageElement.classList.add('loaded');
                 updatePreview(); 
             },
             cropend() {
-                // updatePreview(); // Optional
+                // Optional: Auto-update on drag end (can be slow on older machines)
+                // updatePreview(); 
             }
         });
     }
 
-    // 3. Image Processing: 16-Level Grayscale with Floyd-Steinberg Dithering
+    // 3. Image Processing: High-Quality 16-Level Grayscale Dithering
     function updatePreview() {
         if (!cropper) return;
 
-        // Get cropped canvas at exact Kindle resolution
+        // Get cropped canvas at exact Kindle resolution with high quality scaling
         const tempCanvas = cropper.getCroppedCanvas({
             width: KINDLE_WIDTH,
             height: KINDLE_HEIGHT,
+            imageSmoothingEnabled: true,
             imageSmoothingQuality: 'high'
         });
 
@@ -263,89 +306,78 @@
         const w = KINDLE_WIDTH;
         const h = KINDLE_HEIGHT;
 
-        // Create a Float32 array to hold grayscale values and handle error propagation
-        // This prevents clipping errors and color channel drift
+        // Use Float32Array for precise error calculation to avoid color shifts
         const grayBuffer = new Float32Array(w * h);
 
-        // Pass 1: Convert to Grayscale + Gamma Correction
-        // Gamma 1.8 makes mid-tones slightly brighter, better for E-Ink
+        // Pass 1: Convert to Grayscale with Gamma Correction
+        // Gamma 1.8-2.2 gives best results for E-Ink perception
         const gamma = 1.8; 
         
         for (let i = 0; i < data.length; i += 4) {
-            // Standard Luminance
+            // Standard luminance calculation
             let gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            
-            // Apply Gamma Correction
+            // Apply Gamma
             gray = 255 * Math.pow(gray / 255, 1 / gamma);
-            
             grayBuffer[i / 4] = gray;
         }
 
-        // Pass 2: Floyd-Steinberg Dithering on 16 Levels
+        // Pass 2: Floyd-Steinberg Dithering quantized to 16 levels
         const levels = 16;
-        const step = 255 / (levels - 1); // approx 17
+        const step = 255 / (levels - 1); // Steps of approx 17
 
         for (let y = 0; y < h; y++) {
             for (let x = 0; x < w; x++) {
                 const i = y * w + x;
                 const oldVal = grayBuffer[i];
                 
-                // Quantize to nearest 16-level step
+                // Quantize
                 let newVal = Math.round(oldVal / step) * step;
-                
                 // Clamp
-                if (newVal > 255) newVal = 255;
-                if (newVal < 0) newVal = 0;
+                newVal = Math.max(0, Math.min(255, newVal));
 
-                // Save quantized value back to buffer (for final output)
-                grayBuffer[i] = newVal; // Storing the "displayed" value
+                grayBuffer[i] = newVal; // Store final displayed pixel
 
                 const quantError = oldVal - newVal;
 
-                // Distribute error to neighbors in the float buffer
-                if (x + 1 < w) {
-                    grayBuffer[y * w + (x + 1)] += quantError * 7 / 16;
-                }
-                if (x - 1 >= 0 && y + 1 < h) {
-                    grayBuffer[(y + 1) * w + (x - 1)] += quantError * 3 / 16;
-                }
-                if (y + 1 < h) {
-                    grayBuffer[(y + 1) * w + x] += quantError * 5 / 16;
-                }
-                if (x + 1 < w && y + 1 < h) {
-                    grayBuffer[(y + 1) * w + (x + 1)] += quantError * 1 / 16;
-                }
+                // Distribute error to neighbors (Floyd-Steinberg kernel)
+                if (x + 1 < w) grayBuffer[i + 1] += quantError * 7 / 16;
+                if (x - 1 >= 0 && y + 1 < h) grayBuffer[i + w - 1] += quantError * 3 / 16;
+                if (y + 1 < h) grayBuffer[i + w] += quantError * 5 / 16;
+                if (x + 1 < w && y + 1 < h) grayBuffer[i + w + 1] += quantError * 1 / 16;
             }
         }
 
-        // Pass 3: Write back to ImageData
+        // Pass 3: Write back to RGBA ImageData
         for (let i = 0; i < grayBuffer.length; i++) {
             const val = grayBuffer[i];
             const idx = i * 4;
-            data[idx] = val;     // R
-            data[idx + 1] = val; // G
-            data[idx + 2] = val; // B
-            data[idx + 3] = 255; // Alpha
+            data[idx] = data[idx + 1] = data[idx + 2] = val;
+            data[idx + 3] = 255;
         }
 
+        // Display final result on the preview canvas
         ctx.putImageData(imageData, 0, 0);
     }
 
     // 4. Generate EPUB File
     function generateBook() {
+        // Ensure latest state is captured
         updatePreview(); 
         
-        const title = document.getElementById('bookTitle').value.trim() || "Wallpaper";
-        const author = document.getElementById('bookAuthor').value.trim() || "Saver";
-        const filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+        const title = document.getElementById('bookTitle').value.trim() || "Custom Wallpaper";
+        const author = document.getElementById('bookAuthor').value.trim() || "Saver Tool";
+        // Create a safe filename
+        let filename = title.replace(/[^a-z0-9\u4e00-\u9fa5]/gi, '_').substring(0, 50);
+        if (!filename) filename = "wallpaper";
 
-        // Use the dithered canvas for the cover
-        const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.95);
+        // Get high quality JPEG from canvas
+        const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.92);
         const coverBase64 = coverDataUrl.split(',')[1];
 
         const zip = new JSZip();
         zip.file("mimetype", "application/epub+zip");
 
+        // Standard container.xml
         zip.folder("META-INF").file("container.xml", 
 `<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -355,8 +387,10 @@
 </container>`);
 
         const oebps = zip.folder("OEBPS");
+        // Add cover image
         oebps.file("cover.jpg", coverBase64, {base64: true});
 
+        // Add cover XHTML wrapper (minimalist, centered black bg)
         oebps.file("cover.xhtml", 
 `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -364,8 +398,9 @@
 <head>
   <title>${title}</title>
   <style>
-    body { margin: 0; padding: 0; text-align: center; background-color: black; }
-    img { height: 100%; width: 100%; object-fit: contain; }
+    body { margin: 0; padding: 0; text-align: center; background-color: black; height: 100%; }
+    div { height: 100%; display: flex; justify-content: center; align-items: center; }
+    img { max-height: 100%; max-width: 100%; object-fit: contain; }
   </style>
 </head>
 <body>
@@ -375,8 +410,13 @@
 </body>
 </html>`);
 
-        const uuid = 'urn:uuid:' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        // Generate UUID for the book
+        const uuid = 'urn:uuid:' + 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
 
+        // OPF Package File (Metadata & Manifest)
         oebps.file("content.opf", 
 `<?xml version="1.0" encoding="UTF-8"?>
 <package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="2.0">
@@ -385,6 +425,7 @@
         <dc:language>en</dc:language>
         <dc:creator opf:role="aut">${author}</dc:creator>
         <dc:publisher>KindleSaverTool</dc:publisher>
+        <dc:date opf:event="publication">${new Date().toISOString().split('T')[0]}</dc:date>
         <dc:identifier id="BookID" opf:scheme="UUID">${uuid}</dc:identifier>
         <meta name="cover" content="cover-image" />
     </metadata>
@@ -401,6 +442,7 @@
     </guide>
 </package>`);
 
+        // NCX Table of Contents (Legacy support)
         oebps.file("toc.ncx", 
 `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
@@ -420,6 +462,7 @@
    </navMap>
 </ncx>`);
 
+        // Generate and trigger download
         zip.generateAsync({type:"blob"}).then(function(content) {
             saveAs(content, filename + ".epub");
         });
