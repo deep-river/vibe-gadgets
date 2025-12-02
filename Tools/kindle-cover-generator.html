@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kindle Paperwhite 3 屏保生成器 (Fix)</title>
+    <title>Kindle Paperwhite 3 屏保生成器 (HQ 16-Level)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <style>
         :root {
@@ -28,7 +28,7 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-            box-sizing: border-box; /* Ensure padding doesn't affect width */
+            box-sizing: border-box;
         }
         h1 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
         .step { margin-bottom: 30px; border-bottom: 1px solid #f0f0f0; padding-bottom: 20px; }
@@ -51,31 +51,26 @@
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
-            align-items: flex-start; /* Align top */
+            align-items: flex-start;
         }
         
-        /* --- FIX START: Container Styles --- */
         .crop-container {
             flex: 2;
-            height: 500px; /* Fixed height */
+            height: 500px;
             background: #333;
             min-width: 300px;
-            overflow: hidden; /* CRITICAL FIX: Hide overflowing image parts */
+            overflow: hidden;
             position: relative;
             border-radius: 4px;
         }
         
-        /* Ensure raw image doesn't break layout before JS loads */
         #image-to-crop { 
             display: block; 
             max-width: 100%; 
-            opacity: 0; /* Hide until cropper loads to avoid flash */
+            opacity: 0;
             transition: opacity 0.3s;
         }
-        #image-to-crop.loaded {
-            opacity: 1;
-        }
-        /* --- FIX END --- */
+        #image-to-crop.loaded { opacity: 1; }
 
         .preview-container {
             flex: 1;
@@ -101,7 +96,8 @@
             width: 100%;
             height: 100%;
             display: block;
-            image-rendering: pixelated; 
+            /* Remove pixelated rendering to show smooth 16-level grayscale */
+            /* image-rendering: pixelated; */ 
         }
         .preview-label { font-size: 0.85em; color: #666; text-align: center; margin-bottom: 10px;}
 
@@ -156,7 +152,7 @@
     </div>
 
     <div class="step" id="editor-step" style="display:none;">
-        <span class="step-title">2. 调整与预览 (E-Ink 模拟)</span>
+        <span class="step-title">2. 调整与预览 (E-Ink 16级灰度模拟)</span>
         <div class="editor-wrapper">
             <div class="crop-container">
                 <img id="image-to-crop" src="">
@@ -187,8 +183,8 @@
             </div>
         </div>
         <div class="info-box">
-            <strong>提示：</strong> 生成的文件为 EPUB 格式。Kindle 现在支持 EPUB 封面显示。<br>
-            如果您使用 USB 线传输且需要严格的 .azw3 格式，建议下载后使用 <b>Calibre</b> 转换一次，以确保封面元数据完美写入。
+            <strong>提示：</strong> 生成的文件为 EPUB 格式。<br>
+            <b>效果说明：</b> 预览图已应用 Kindle 的 16 级灰度抖动算法，所见即所得。请使用 Calibre 转换为 AZW3 格式以获得最佳兼容性。
         </div>
         <div style="margin-top: 20px; text-align: right;">
             <button class="primary" onclick="generateBook()" style="padding: 12px 24px; font-size: 1.1em;">生成并下载电子书</button>
@@ -219,14 +215,10 @@
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
-                // Reset CSS class
                 imageElement.classList.remove('loaded');
-                
                 imageElement.src = e.target.result;
                 document.getElementById('editor-step').style.display = 'block';
                 document.getElementById('download-step').style.display = 'block';
-                
-                // Small delay to ensure DOM update
                 setTimeout(initCropper, 50);
             }
             reader.readAsDataURL(input.files[0]);
@@ -239,22 +231,20 @@
         
         cropper = new Cropper(imageElement, {
             aspectRatio: KINDLE_WIDTH / KINDLE_HEIGHT,
-            viewMode: 1, // Restrict crop box to within the canvas
+            viewMode: 1,
             autoCropArea: 0.9,
-            background: false, // Turn off grid background for cleaner look
+            background: false,
             ready() {
-                // Show image once cropper is ready
                 imageElement.classList.add('loaded');
                 updatePreview(); 
             },
             cropend() {
-                // Optional: Auto preview on release
-                // updatePreview(); 
+                // updatePreview(); // Optional
             }
         });
     }
 
-    // 3. Image Processing: Resize -> Grayscale -> Dither
+    // 3. Image Processing: 16-Level Grayscale with Floyd-Steinberg Dithering
     function updatePreview() {
         if (!cropper) return;
 
@@ -270,44 +260,72 @@
         const tempCtx = tempCanvas.getContext('2d');
         const imageData = tempCtx.getImageData(0, 0, KINDLE_WIDTH, KINDLE_HEIGHT);
         const data = imageData.data;
-
-        // Apply Floyd-Steinberg Dithering for E-Ink Look
         const w = KINDLE_WIDTH;
+        const h = KINDLE_HEIGHT;
 
+        // Create a Float32 array to hold grayscale values and handle error propagation
+        // This prevents clipping errors and color channel drift
+        const grayBuffer = new Float32Array(w * h);
+
+        // Pass 1: Convert to Grayscale + Gamma Correction
+        // Gamma 1.8 makes mid-tones slightly brighter, better for E-Ink
+        const gamma = 1.8; 
+        
         for (let i = 0; i < data.length; i += 4) {
-            // Standard Grayscale (Luma)
-            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-            data[i] = data[i+1] = data[i+2] = gray;
+            // Standard Luminance
+            let gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            
+            // Apply Gamma Correction
+            gray = 255 * Math.pow(gray / 255, 1 / gamma);
+            
+            grayBuffer[i / 4] = gray;
         }
 
-        // Apply Dithering
-        for (let y = 0; y < KINDLE_HEIGHT; y++) {
-            for (let x = 0; x < KINDLE_WIDTH; x++) {
-                const i = (y * w + x) * 4;
-                const oldPixel = data[i]; // Already grayscale
-                const newPixel = oldPixel < 128 ? 0 : 255; // Threshold
-                
-                data[i] = data[i+1] = data[i+2] = newPixel;
-                
-                const quantError = oldPixel - newPixel;
+        // Pass 2: Floyd-Steinberg Dithering on 16 Levels
+        const levels = 16;
+        const step = 255 / (levels - 1); // approx 17
 
+        for (let y = 0; y < h; y++) {
+            for (let x = 0; x < w; x++) {
+                const i = y * w + x;
+                const oldVal = grayBuffer[i];
+                
+                // Quantize to nearest 16-level step
+                let newVal = Math.round(oldVal / step) * step;
+                
+                // Clamp
+                if (newVal > 255) newVal = 255;
+                if (newVal < 0) newVal = 0;
+
+                // Save quantized value back to buffer (for final output)
+                grayBuffer[i] = newVal; // Storing the "displayed" value
+
+                const quantError = oldVal - newVal;
+
+                // Distribute error to neighbors in the float buffer
                 if (x + 1 < w) {
-                    const idx = (y * w + (x + 1)) * 4;
-                    data[idx] += quantError * 7 / 16;
+                    grayBuffer[y * w + (x + 1)] += quantError * 7 / 16;
                 }
-                if (x - 1 >= 0 && y + 1 < KINDLE_HEIGHT) {
-                    const idx = ((y + 1) * w + (x - 1)) * 4;
-                    data[idx] += quantError * 3 / 16;
+                if (x - 1 >= 0 && y + 1 < h) {
+                    grayBuffer[(y + 1) * w + (x - 1)] += quantError * 3 / 16;
                 }
-                if (y + 1 < KINDLE_HEIGHT) {
-                    const idx = ((y + 1) * w + x) * 4;
-                    data[idx] += quantError * 5 / 16;
+                if (y + 1 < h) {
+                    grayBuffer[(y + 1) * w + x] += quantError * 5 / 16;
                 }
-                if (x + 1 < w && y + 1 < KINDLE_HEIGHT) {
-                    const idx = ((y + 1) * w + (x + 1)) * 4;
-                    data[idx] += quantError * 1 / 16;
+                if (x + 1 < w && y + 1 < h) {
+                    grayBuffer[(y + 1) * w + (x + 1)] += quantError * 1 / 16;
                 }
             }
+        }
+
+        // Pass 3: Write back to ImageData
+        for (let i = 0; i < grayBuffer.length; i++) {
+            const val = grayBuffer[i];
+            const idx = i * 4;
+            data[idx] = val;     // R
+            data[idx + 1] = val; // G
+            data[idx + 2] = val; // B
+            data[idx + 3] = 255; // Alpha
         }
 
         ctx.putImageData(imageData, 0, 0);
@@ -321,7 +339,8 @@
         const author = document.getElementById('bookAuthor').value.trim() || "Saver";
         const filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
-        const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.9);
+        // Use the dithered canvas for the cover
+        const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.95);
         const coverBase64 = coverDataUrl.split(',')[1];
 
         const zip = new JSZip();
