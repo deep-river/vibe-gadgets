@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kindle Paperwhite 3 屏保生成器</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --kindle-black: #111;
+            --kindle-bg: #f5f5f5;
+            --accent: #0078d4;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--kindle-bg);
+            color: var(--kindle-black);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        h1 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
+        .step { margin-bottom: 30px; }
+        .step-title { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; display: block; }
+        
+        /* Upload */
+        .file-upload {
+            border: 2px dashed #ccc;
+            padding: 40px;
+            text-align: center;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: 0.2s;
+        }
+        .file-upload:hover { border-color: var(--accent); background: #f0f8ff; }
+        
+        /* Editor Area */
+        .editor-wrapper {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .crop-container {
+            flex: 2;
+            height: 500px;
+            background: #333;
+            min-width: 300px;
+        }
+        .preview-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-width: 250px;
+        }
+        img { max-width: 100%; }
+        
+        /* Simulating Kindle Screen */
+        .kindle-frame {
+            width: 240px; /* Scale down for preview */
+            height: 322px; /* Aspect ratio of 1072/1448 roughly */
+            border: 10px solid #111;
+            border-radius: 10px;
+            background: #e8e8e8;
+            padding: 5px;
+            box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
+            position: relative;
+        }
+        #preview-canvas {
+            width: 100%;
+            height: 100%;
+            display: block;
+            image-rendering: pixelated; /* Show the dithering clearly */
+        }
+        .preview-label { margin-top: 5px; font-size: 0.85em; color: #666; text-align: center; }
+
+        /* Controls */
+        .controls { margin-top: 10px; display: flex; gap: 10px; }
+        button {
+            padding: 8px 16px;
+            background: white;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        button:hover { background: #eee; }
+        button.primary { background: var(--accent); color: white; border: none; }
+        button.primary:hover { background: #005a9e; }
+
+        /* Meta Inputs */
+        .meta-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+        .form-group label { display: block; margin-bottom: 5px; font-size: 0.9em; }
+        .form-group input { 
+            width: 100%; padding: 8px; box-sizing: border-box; 
+            border: 1px solid #ccc; border-radius: 4px;
+        }
+
+        .info-box {
+            background: #eef;
+            padding: 15px;
+            border-radius: 4px;
+            font-size: 0.9em;
+            margin-top: 20px;
+            border-left: 4px solid var(--accent);
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Kindle Paperwhite 3 屏保生成器</h1>
+    <p>将任意图片适配为 PPW3 屏保 (1448x1072)，并打包为电子书文件。</p>
+
+    <div class="step">
+        <span class="step-title">1. 选择图片</span>
+        <div class="file-upload" onclick="document.getElementById('fileInput').click()">
+            <input type="file" id="fileInput" accept="image/*" style="display:none" onchange="handleFileSelect(this)">
+            <p>点击上传或拖拽图片至此<br><span style="color:#888; font-size:0.8em">支持 JPG, PNG</span></p>
+        </div>
+    </div>
+
+    <div class="step" id="editor-step" style="display:none;">
+        <span class="step-title">2. 调整与预览 (E-Ink 模拟)</span>
+        <div class="editor-wrapper">
+            <div class="crop-container">
+                <img id="image-to-crop" src="">
+            </div>
+            <div class="preview-container">
+                <div class="kindle-frame">
+                    <canvas id="preview-canvas"></canvas>
+                </div>
+                <div class="preview-label">Paperwhite 3 墨水屏模拟效果</div>
+                <div class="controls">
+                    <button onclick="updatePreview()">刷新预览</button>
+                    <button onclick="cropper.rotate(90)">旋转 90°</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="step" id="download-step" style="display:none;">
+        <span class="step-title">3. 书籍信息与导出</span>
+        <div class="meta-grid">
+            <div class="form-group">
+                <label>书籍标题 (显示在顶部)</label>
+                <input type="text" id="bookTitle" placeholder="Custom Wallpaper">
+            </div>
+            <div class="form-group">
+                <label>作者 (显示在列表)</label>
+                <input type="text" id="bookAuthor" placeholder="Saver">
+            </div>
+        </div>
+        <div class="info-box">
+            <strong>提示：</strong> 生成的文件为 EPUB 格式。Kindle 现在支持 EPUB 封面显示。<br>
+            如果您使用 USB 线传输且需要严格的 .azw3 格式，建议下载后使用 <b>Calibre</b> 转换一次，以确保封面元数据完美写入。
+        </div>
+        <div style="margin-top: 20px; text-align: right;">
+            <button class="primary" onclick="generateBook()" style="padding: 12px 24px; font-size: 1.1em;">生成并下载电子书</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/FileSaver.js/2.0.5/FileSaver.min.js"></script>
+
+<script>
+    // Configuration for PPW3
+    const KINDLE_WIDTH = 1072;
+    const KINDLE_HEIGHT = 1448;
+    
+    let cropper;
+    const imageElement = document.getElementById('image-to-crop');
+    const previewCanvas = document.getElementById('preview-canvas');
+    const ctx = previewCanvas.getContext('2d');
+
+    // Initialize Canvas Size
+    previewCanvas.width = KINDLE_WIDTH;
+    previewCanvas.height = KINDLE_HEIGHT;
+
+    // 1. Handle File Upload
+    function handleFileSelect(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                imageElement.src = e.target.result;
+                document.getElementById('editor-step').style.display = 'block';
+                document.getElementById('download-step').style.display = 'block';
+                initCropper();
+            }
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    // 2. Initialize Cropper
+    function initCropper() {
+        if (cropper) cropper.destroy();
+        cropper = new Cropper(imageElement, {
+            aspectRatio: KINDLE_WIDTH / KINDLE_HEIGHT,
+            viewMode: 1,
+            autoCropArea: 1,
+            ready() {
+                updatePreview(); // Auto preview on load
+            },
+            cropend() {
+                // Optional: Auto preview on release? Maybe too heavy.
+                // updatePreview(); 
+            }
+        });
+    }
+
+    // 3. Image Processing: Resize -> Grayscale -> Dither
+    function updatePreview() {
+        if (!cropper) return;
+
+        // Get cropped canvas at exact Kindle resolution
+        const tempCanvas = cropper.getCroppedCanvas({
+            width: KINDLE_WIDTH,
+            height: KINDLE_HEIGHT,
+            imageSmoothingQuality: 'high'
+        });
+
+        const tempCtx = tempCanvas.getContext('2d');
+        const imageData = tempCtx.getImageData(0, 0, KINDLE_WIDTH, KINDLE_HEIGHT);
+        const data = imageData.data;
+
+        // Apply Floyd-Steinberg Dithering for E-Ink Look
+        // First convert to grayscale, then dither
+        
+        // Define width for the neighbor calculation
+        const w = KINDLE_WIDTH;
+
+        for (let i = 0; i < data.length; i += 4) {
+            // Standard Grayscale (Luma)
+            const gray = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+            data[i] = data[i+1] = data[i+2] = gray;
+        }
+
+        // Apply Dithering
+        for (let y = 0; y < KINDLE_HEIGHT; y++) {
+            for (let x = 0; x < KINDLE_WIDTH; x++) {
+                const i = (y * w + x) * 4;
+                const oldPixel = data[i]; // Already grayscale
+                const newPixel = oldPixel < 128 ? 0 : 255; // Threshold
+                
+                // Set pixel to black or white
+                data[i] = data[i+1] = data[i+2] = newPixel;
+                
+                const quantError = oldPixel - newPixel;
+
+                // Distribute error to neighbors
+                if (x + 1 < w) {
+                    const idx = (y * w + (x + 1)) * 4;
+                    data[idx] += quantError * 7 / 16;
+                }
+                if (x - 1 >= 0 && y + 1 < KINDLE_HEIGHT) {
+                    const idx = ((y + 1) * w + (x - 1)) * 4;
+                    data[idx] += quantError * 3 / 16;
+                }
+                if (y + 1 < KINDLE_HEIGHT) {
+                    const idx = ((y + 1) * w + x) * 4;
+                    data[idx] += quantError * 5 / 16;
+                }
+                if (x + 1 < w && y + 1 < KINDLE_HEIGHT) {
+                    const idx = ((y + 1) * w + (x + 1)) * 4;
+                    data[idx] += quantError * 1 / 16;
+                }
+            }
+        }
+
+        // Put dithered image onto preview canvas
+        ctx.putImageData(imageData, 0, 0);
+    }
+
+    // 4. Generate EPUB File
+    function generateBook() {
+        // Ensure we have the latest dithered/cropped image
+        updatePreview(); 
+        
+        // Get metadata
+        const title = document.getElementById('bookTitle').value.trim() || "Wallpaper";
+        const author = document.getElementById('bookAuthor').value.trim() || "Saver";
+        const filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+
+        // Get image data URL (JPEG)
+        const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.9);
+        const coverBase64 = coverDataUrl.split(',')[1];
+
+        // Create Zip
+        const zip = new JSZip();
+        
+        // Mimetype
+        zip.file("mimetype", "application/epub+zip");
+
+        // Container
+        zip.folder("META-INF").file("container.xml", 
+`<?xml version="1.0"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+   <rootfiles>
+      <rootfile full-path="OEBPS/content.opf" media-type="application/oebps-package+xml"/>
+   </rootfiles>
+</container>`);
+
+        // OEBPS Folder
+        const oebps = zip.folder("OEBPS");
+        
+        // Add Image
+        oebps.file("cover.jpg", coverBase64, {base64: true});
+
+        // Add HTML wrapper for the image (so it's a valid book)
+        oebps.file("cover.xhtml", 
+`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+  <title>${title}</title>
+  <style>
+    body { margin: 0; padding: 0; text-align: center; background-color: black; }
+    img { height: 100%; width: 100%; object-fit: contain; }
+  </style>
+</head>
+<body>
+  <div>
+    <img src="cover.jpg" alt="Cover" />
+  </div>
+</body>
+</html>`);
+
+        // Add OPF (Metadata & Manifest)
+        // Unique ID generation
+        const uuid = 'urn:uuid:' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
+        oebps.file("content.opf", 
+`<?xml version="1.0" encoding="UTF-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="BookID" version="2.0">
+    <metadata xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:opf="http://www.idpf.org/2007/opf">
+        <dc:title>${title}</dc:title>
+        <dc:language>en</dc:language>
+        <dc:creator opf:role="aut">${author}</dc:creator>
+        <dc:publisher>KindleSaverTool</dc:publisher>
+        <dc:identifier id="BookID" opf:scheme="UUID">${uuid}</dc:identifier>
+        <meta name="cover" content="cover-image" />
+    </metadata>
+    <manifest>
+        <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml"/>
+        <item id="cover-image" href="cover.jpg" media-type="image/jpeg"/>
+        <item id="cover-page" href="cover.xhtml" media-type="application/xhtml+xml"/>
+    </manifest>
+    <spine toc="ncx">
+        <itemref idref="cover-page"/>
+    </spine>
+    <guide>
+        <reference type="cover" title="Cover" href="cover.xhtml"/>
+    </guide>
+</package>`);
+
+        // Add NCX (Table of Contents - required for old readers)
+        oebps.file("toc.ncx", 
+`<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+   <head>
+      <meta name="dtb:uid" content="${uuid}"/>
+      <meta name="dtb:depth" content="1"/>
+      <meta name="dtb:totalPageCount" content="0"/>
+      <meta name="dtb:maxPageNumber" content="0"/>
+   </head>
+   <docTitle><text>${title}</text></docTitle>
+   <navMap>
+      <navPoint id="navPoint-1" playOrder="1">
+         <navLabel><text>Cover</text></navLabel>
+         <content src="cover.xhtml"/>
+      </navPoint>
+   </navMap>
+</ncx>`);
+
+        // Generate and Download
+        zip.generateAsync({type:"blob"}).then(function(content) {
+            saveAs(content, filename + ".epub");
+        });
+    }
+</script>
+
+</body>
+</html>
