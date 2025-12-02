@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kindle Paperwhite 3 屏保生成器</title>
+    <title>Kindle Paperwhite 3 屏保生成器 (Fix)</title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <style>
         :root {
@@ -28,10 +28,12 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            box-sizing: border-box; /* Ensure padding doesn't affect width */
         }
         h1 { margin-top: 0; border-bottom: 2px solid #eee; padding-bottom: 10px; }
-        .step { margin-bottom: 30px; }
-        .step-title { font-weight: bold; font-size: 1.2em; margin-bottom: 10px; display: block; }
+        .step { margin-bottom: 30px; border-bottom: 1px solid #f0f0f0; padding-bottom: 20px; }
+        .step:last-child { border-bottom: none; }
+        .step-title { font-weight: bold; font-size: 1.2em; margin-bottom: 15px; display: block; }
         
         /* Upload */
         .file-upload {
@@ -49,13 +51,32 @@
             display: flex;
             gap: 20px;
             flex-wrap: wrap;
+            align-items: flex-start; /* Align top */
         }
+        
+        /* --- FIX START: Container Styles --- */
         .crop-container {
             flex: 2;
-            height: 500px;
+            height: 500px; /* Fixed height */
             background: #333;
             min-width: 300px;
+            overflow: hidden; /* CRITICAL FIX: Hide overflowing image parts */
+            position: relative;
+            border-radius: 4px;
         }
+        
+        /* Ensure raw image doesn't break layout before JS loads */
+        #image-to-crop { 
+            display: block; 
+            max-width: 100%; 
+            opacity: 0; /* Hide until cropper loads to avoid flash */
+            transition: opacity 0.3s;
+        }
+        #image-to-crop.loaded {
+            opacity: 1;
+        }
+        /* --- FIX END --- */
+
         .preview-container {
             flex: 1;
             display: flex;
@@ -63,29 +84,29 @@
             align-items: center;
             min-width: 250px;
         }
-        img { max-width: 100%; }
         
         /* Simulating Kindle Screen */
         .kindle-frame {
-            width: 240px; /* Scale down for preview */
-            height: 322px; /* Aspect ratio of 1072/1448 roughly */
+            width: 240px; 
+            height: 322px; 
             border: 10px solid #111;
             border-radius: 10px;
             background: #e8e8e8;
             padding: 5px;
             box-shadow: 3px 3px 10px rgba(0,0,0,0.2);
             position: relative;
+            margin-bottom: 10px;
         }
         #preview-canvas {
             width: 100%;
             height: 100%;
             display: block;
-            image-rendering: pixelated; /* Show the dithering clearly */
+            image-rendering: pixelated; 
         }
-        .preview-label { margin-top: 5px; font-size: 0.85em; color: #666; text-align: center; }
+        .preview-label { font-size: 0.85em; color: #666; text-align: center; margin-bottom: 10px;}
 
         /* Controls */
-        .controls { margin-top: 10px; display: flex; gap: 10px; }
+        .controls { display: flex; gap: 10px; justify-content: center; width: 100%; }
         button {
             padding: 8px 16px;
             background: white;
@@ -147,7 +168,7 @@
                 <div class="preview-label">Paperwhite 3 墨水屏模拟效果</div>
                 <div class="controls">
                     <button onclick="updatePreview()">刷新预览</button>
-                    <button onclick="cropper.rotate(90)">旋转 90°</button>
+                    <button onclick="cropper.rotate(90); updatePreview()">旋转 90°</button>
                 </div>
             </div>
         </div>
@@ -198,10 +219,15 @@
         if (input.files && input.files[0]) {
             const reader = new FileReader();
             reader.onload = function(e) {
+                // Reset CSS class
+                imageElement.classList.remove('loaded');
+                
                 imageElement.src = e.target.result;
                 document.getElementById('editor-step').style.display = 'block';
                 document.getElementById('download-step').style.display = 'block';
-                initCropper();
+                
+                // Small delay to ensure DOM update
+                setTimeout(initCropper, 50);
             }
             reader.readAsDataURL(input.files[0]);
         }
@@ -210,15 +236,19 @@
     // 2. Initialize Cropper
     function initCropper() {
         if (cropper) cropper.destroy();
+        
         cropper = new Cropper(imageElement, {
             aspectRatio: KINDLE_WIDTH / KINDLE_HEIGHT,
-            viewMode: 1,
-            autoCropArea: 1,
+            viewMode: 1, // Restrict crop box to within the canvas
+            autoCropArea: 0.9,
+            background: false, // Turn off grid background for cleaner look
             ready() {
-                updatePreview(); // Auto preview on load
+                // Show image once cropper is ready
+                imageElement.classList.add('loaded');
+                updatePreview(); 
             },
             cropend() {
-                // Optional: Auto preview on release? Maybe too heavy.
+                // Optional: Auto preview on release
                 // updatePreview(); 
             }
         });
@@ -235,14 +265,13 @@
             imageSmoothingQuality: 'high'
         });
 
+        if(!tempCanvas) return;
+
         const tempCtx = tempCanvas.getContext('2d');
         const imageData = tempCtx.getImageData(0, 0, KINDLE_WIDTH, KINDLE_HEIGHT);
         const data = imageData.data;
 
         // Apply Floyd-Steinberg Dithering for E-Ink Look
-        // First convert to grayscale, then dither
-        
-        // Define width for the neighbor calculation
         const w = KINDLE_WIDTH;
 
         for (let i = 0; i < data.length; i += 4) {
@@ -258,12 +287,10 @@
                 const oldPixel = data[i]; // Already grayscale
                 const newPixel = oldPixel < 128 ? 0 : 255; // Threshold
                 
-                // Set pixel to black or white
                 data[i] = data[i+1] = data[i+2] = newPixel;
                 
                 const quantError = oldPixel - newPixel;
 
-                // Distribute error to neighbors
                 if (x + 1 < w) {
                     const idx = (y * w + (x + 1)) * 4;
                     data[idx] += quantError * 7 / 16;
@@ -283,31 +310,23 @@
             }
         }
 
-        // Put dithered image onto preview canvas
         ctx.putImageData(imageData, 0, 0);
     }
 
     // 4. Generate EPUB File
     function generateBook() {
-        // Ensure we have the latest dithered/cropped image
         updatePreview(); 
         
-        // Get metadata
         const title = document.getElementById('bookTitle').value.trim() || "Wallpaper";
         const author = document.getElementById('bookAuthor').value.trim() || "Saver";
         const filename = title.replace(/[^a-z0-9]/gi, '_').toLowerCase();
 
-        // Get image data URL (JPEG)
         const coverDataUrl = previewCanvas.toDataURL('image/jpeg', 0.9);
         const coverBase64 = coverDataUrl.split(',')[1];
 
-        // Create Zip
         const zip = new JSZip();
-        
-        // Mimetype
         zip.file("mimetype", "application/epub+zip");
 
-        // Container
         zip.folder("META-INF").file("container.xml", 
 `<?xml version="1.0"?>
 <container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
@@ -316,13 +335,9 @@
    </rootfiles>
 </container>`);
 
-        // OEBPS Folder
         const oebps = zip.folder("OEBPS");
-        
-        // Add Image
         oebps.file("cover.jpg", coverBase64, {base64: true});
 
-        // Add HTML wrapper for the image (so it's a valid book)
         oebps.file("cover.xhtml", 
 `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE html>
@@ -341,8 +356,6 @@
 </body>
 </html>`);
 
-        // Add OPF (Metadata & Manifest)
-        // Unique ID generation
         const uuid = 'urn:uuid:' + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 
         oebps.file("content.opf", 
@@ -369,7 +382,6 @@
     </guide>
 </package>`);
 
-        // Add NCX (Table of Contents - required for old readers)
         oebps.file("toc.ncx", 
 `<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE ncx PUBLIC "-//NISO//DTD ncx 2005-1//EN" "http://www.daisy.org/z3986/2005/ncx-2005-1.dtd">
@@ -389,7 +401,6 @@
    </navMap>
 </ncx>`);
 
-        // Generate and Download
         zip.generateAsync({type:"blob"}).then(function(content) {
             saveAs(content, filename + ".epub");
         });
